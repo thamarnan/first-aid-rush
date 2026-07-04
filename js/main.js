@@ -166,15 +166,52 @@ function mat(color, opts = {}) {
   return matCache.get(key);
 }
 const G = {
-  head: new THREE.SphereGeometry(0.185, 18, 14),
+  head: new THREE.SphereGeometry(0.185, 20, 16),
   hairCap: new THREE.SphereGeometry(0.21, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.55),
   torso: new THREE.CapsuleGeometry(0.19, 0.34, 6, 12),
-  arm: new THREE.CapsuleGeometry(0.062, 0.4, 4, 10),
-  leg: new THREE.BoxGeometry(0.14, 0.82, 0.17),
-  wideLeg: new THREE.BoxGeometry(0.2, 0.84, 0.24),
-  shoe: new THREE.BoxGeometry(0.15, 0.09, 0.3),
+  arm: new THREE.CapsuleGeometry(0.06, 0.36, 4, 10),
+  leg: new THREE.CapsuleGeometry(0.075, 0.6, 4, 10),
+  wideLeg: new THREE.CapsuleGeometry(0.105, 0.55, 4, 10),
+  shoe: new THREE.BoxGeometry(0.14, 0.09, 0.28),
   skirt: new THREE.ConeGeometry(0.35, 0.62, 14, 1, true),
+  hand: new THREE.SphereGeometry(0.055, 8, 6),
+  eye: new THREE.SphereGeometry(0.021, 8, 6),
+  blush: new THREE.SphereGeometry(0.02, 6, 4),
+  smile: new THREE.TorusGeometry(0.036, 0.009, 6, 10, Math.PI),
+  neck: new THREE.CylinderGeometry(0.055, 0.06, 0.1, 10),
+  backHair: new THREE.SphereGeometry(0.17, 14, 10),
+  sideLock: new THREE.CapsuleGeometry(0.045, 0.26, 4, 8),
 };
+
+// eyes / brows / smile / blush attached to a head mesh. rot=PI for figures
+// built facing -Z. happyEyes = closed ghibli smile-eyes.
+function addFace(head, o = {}) {
+  const f = new THREE.Group();
+  const eyeM = mat(0x2b2118);
+  const browM = mat(o.hair ?? 0x3a2e26);
+  for (const sx of [-1, 1]) {
+    const e = new THREE.Mesh(G.eye, eyeM);
+    e.position.set(sx * 0.063, 0.012, 0.157);
+    if (o.happyEyes) { e.scale.set(1.3, 0.35, 0.5); e.position.y = 0.03; }
+    f.add(e);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.011, 0.012), browM);
+    brow.position.set(sx * 0.063, 0.082, 0.158);
+    brow.rotation.z = sx * -0.18;
+    f.add(brow);
+    const blush = new THREE.Mesh(G.blush, mat(0xeb9d84));
+    blush.position.set(sx * 0.108, -0.038, 0.125);
+    blush.scale.set(1.25, 0.65, 0.4);
+    f.add(blush);
+  }
+  const smile = new THREE.Mesh(G.smile, mat(0x9c5241));
+  smile.position.set(0, -0.028, 0.152);
+  smile.rotation.z = Math.PI; // arc ends turn up
+  smile.scale.set(o.bigSmile ? 1.3 : 1, o.bigSmile ? 1.15 : 0.8, 0.5);
+  f.add(smile);
+  if (o.rot) f.rotation.y = o.rot;
+  head.add(f);
+  return f;
+}
 
 function box(wd, ht, dp, m, x = 0, y = 0, z = 0, shadow = true) {
   const ms = new THREE.Mesh(new THREE.BoxGeometry(wd, ht, dp), m);
@@ -196,38 +233,54 @@ function makePerson(o = {}) {
     p.position.set(sx * 0.1, 0.92, 0);
     const legM = o.skirt ? skinM : mat(o.pants ?? pick(PAL.pants));
     const l = new THREE.Mesh(o.widePants ? G.wideLeg : G.leg, legM);
-    l.position.y = -0.44; l.castShadow = true;
+    l.position.y = -0.42; l.castShadow = true;
     const s = new THREE.Mesh(G.shoe, mat(o.shoes ?? 0x4a4640));
-    s.position.set(0, -0.88, 0.05); s.castShadow = true;
+    s.position.set(0, -0.86, 0.05); s.castShadow = true;
     p.add(l, s);
     return p;
   };
   const mkArm = (sx) => {
     const p = new THREE.Group();
-    p.position.set(sx * 0.27, 1.5, 0);
+    p.position.set(sx * 0.26, 1.5, 0);
     const a = new THREE.Mesh(G.arm, o.bareArms ? skinM : shirtM);
-    a.position.y = -0.24; a.castShadow = true;
-    p.add(a);
+    a.position.y = -0.22; a.castShadow = true;
+    const h = new THREE.Mesh(G.hand, skinM);
+    h.position.y = -0.46;
+    p.add(a, h);
+    p.rotation.z = sx * -0.07; // arms rest slightly outward
     return p;
   };
 
   const legL = mkLeg(-1), legR = mkLeg(1), armL = mkArm(-1), armR = mkArm(1);
 
   const torso = new THREE.Mesh(G.torso, shirtM);
-  torso.position.y = 1.27; torso.castShadow = true;
+  torso.position.y = 1.27; torso.scale.set(1.1, 1, 0.82);
+  torso.castShadow = true;
+
+  const neck = new THREE.Mesh(G.neck, skinM);
+  neck.position.y = 1.6;
 
   const head = new THREE.Mesh(G.head, skinM);
-  head.position.y = 1.76; head.castShadow = true;
+  head.position.y = 1.78; head.scale.set(1, 1.05, 0.97);
+  head.castShadow = true;
+  addFace(head, { hair: o.hair, happyEyes: o.happyEyes ?? Math.random() < 0.3 });
 
   const hair = new THREE.Mesh(G.hairCap, hairM);
-  hair.position.set(0, 1.79, -0.015);
-  g.add(legL, legR, armL, armR, torso, head, hair);
+  hair.position.set(0, 1.81, -0.015);
+  g.add(legL, legR, armL, armR, torso, neck, head, hair);
 
   if (o.longHair) {
-    const back = box(0.32, 0.5, 0.1, hairM, 0, 1.55, 0.16);
-    back.rotation.x = 0.08;
+    const back = new THREE.Mesh(G.backHair, hairM);
+    back.position.set(0, 1.62, -0.14); // behind the head (persons face +Z)
+    back.scale.set(1.02, 1.55, 0.55);
+    back.castShadow = true;
     g.add(back);
-    if (o.hairTips) g.add(box(0.3, 0.16, 0.09, mat(o.hairTips), 0, 1.32, 0.185));
+    for (const sx of [-1, 1]) { // loose strands framing the face
+      const lock = new THREE.Mesh(G.sideLock, hairM);
+      lock.position.set(sx * 0.175, 1.6, 0.03);
+      lock.rotation.z = sx * 0.1;
+      g.add(lock);
+    }
   }
   if (o.skirt) {
     const sk = new THREE.Mesh(G.skirt, o.skirtMat ?? mat(0x39456b));
@@ -272,14 +325,14 @@ function buildPlayer() {
   // --- lady from the video: black tank, cream wide pants, tote bag ---
   const lady = makePerson({
     skin: 0xe0aa82, shirt: 0x2b2b30, hair: 0x38281c,
-    bareArms: true, widePants: true, pants: 0xece4d2,
-    shoes: 0xc9c9cf, longHair: true, hairTips: 0x8a6a48,
+    bareArms: true, widePants: true, pants: 0xe3d9c2,
+    shoes: 0xeae4d8, longHair: true, happyEyes: false, bigSmile: true,
   });
   lady.g.rotation.y = Math.PI; // face -Z
   // white cross straps on her back (crossback top detail)
   const strapM = mat(0xf2f0ea);
-  const s1 = box(0.03, 0.34, 0.012, strapM, 0.07, 1.42, -0.185);
-  const s2 = box(0.03, 0.34, 0.012, strapM, -0.07, 1.42, -0.185);
+  const s1 = box(0.03, 0.34, 0.012, strapM, 0.07, 1.42, 0.165);
+  const s2 = box(0.03, 0.34, 0.012, strapM, -0.07, 1.42, 0.165);
   s1.rotation.z = 0.45; s2.rotation.z = -0.45;
   s1.rotation.y = Math.PI; s2.rotation.y = Math.PI;
   root.add(s1, s2);
@@ -357,48 +410,69 @@ function buildPlayer() {
   // footrest
   wc.add(box(0.5, 0.04, 0.16, frameM, 0, 0.16, -0.42));
 
-  // --- the guy: black tee, buzzed head, backpack stuck on his raised hand ---
+  // --- the guy (per reference): bald, dark beard, black v-neck tee,
+  //     hugging the navy backpack on his lap, sandals ---
   const guy = new THREE.Group();
   guy.position.x = 0.09; // peek out from behind the pusher
   guy.rotation.z = -0.06;
-  const gSkin = mat(0xd9a077);
-  const gShirt = mat(0x232326);
+  const gSkin = mat(0xdca87e);
+  const gShirt = mat(0x25262c);
   const torso = new THREE.Mesh(G.torso, gShirt);
-  torso.position.set(0, 0.98, 0.05); torso.castShadow = true;
+  torso.position.set(0, 0.98, 0.05);
+  torso.scale.set(1.35, 1.05, 1.05); // broad build
+  torso.castShadow = true;
+  const neck = new THREE.Mesh(G.neck, gSkin);
+  neck.position.set(0, 1.32, 0.03); neck.scale.setScalar(1.25);
   const head = new THREE.Mesh(G.head, gSkin);
-  head.position.set(0, 1.42, 0.02); head.castShadow = true;
-  const fuzz = new THREE.Mesh(G.hairCap, mat(0xb3805c));
-  fuzz.scale.setScalar(0.92); fuzz.position.set(0, 1.45, 0.015);
-  guy.add(torso, head, fuzz);
-  // seated legs
-  const thighM = mat(0x3c3c44);
+  head.position.set(0, 1.5, 0.02); head.scale.set(1.08, 1.1, 1.02);
+  head.castShadow = true;
+  addFace(head, { rot: Math.PI, hair: 0x352a22, bigSmile: true }); // he faces -Z
+  // dark beard: jaw patch + mustache + brow shadow (bald head, no hair cap)
+  const beardM = mat(0x3a2e26);
+  const beard = new THREE.Mesh(G.backHair, beardM);
+  beard.position.set(0, 1.36, -0.09);
+  beard.scale.set(0.8, 0.55, 0.66);
+  const stache = box(0.11, 0.026, 0.02, beardM, 0, 1.472, -0.192, false);
+  guy.add(torso, neck, head, beard, stache);
+  // seated legs: dark pants + sandals on the footrest
+  const thighM = mat(0x424653);
   for (const sx of [-1, 1]) {
-    guy.add(box(0.15, 0.15, 0.4, thighM, sx * 0.12, 0.6, -0.16));
-    guy.add(box(0.13, 0.4, 0.14, thighM, sx * 0.12, 0.38, -0.36));
-    guy.add(box(0.13, 0.08, 0.26, mat(0x2a2a2e), sx * 0.12, 0.17, -0.4));
+    guy.add(box(0.16, 0.16, 0.42, thighM, sx * 0.13, 0.62, -0.16));
+    guy.add(box(0.14, 0.42, 0.15, thighM, sx * 0.13, 0.38, -0.37));
+    const sandal = box(0.14, 0.045, 0.28, mat(0x4a4038), sx * 0.13, 0.15, -0.42);
+    const strap = box(0.15, 0.03, 0.06, mat(0x5c5248), sx * 0.13, 0.185, -0.44, false);
+    const toes = new THREE.Mesh(G.hand, gSkin);
+    toes.position.set(sx * 0.13, 0.185, -0.52);
+    toes.scale.set(1.1, 0.5, 0.9);
+    guy.add(sandal, strap, toes);
   }
-  // left arm resting
-  const aL = new THREE.Mesh(G.arm, gShirt);
-  aL.position.set(-0.28, 0.92, 0.02); aL.rotation.x = -0.5; aL.castShadow = true;
-  guy.add(aL);
-  // right arm RAISED — with a lil backpack stuck on the hand!
-  const armUp = new THREE.Group();
-  armUp.position.set(0.27, 1.12, 0.05);
-  const aR = new THREE.Mesh(G.arm, gShirt);
-  aR.position.y = 0.24; aR.castShadow = true;
-  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), gSkin);
-  hand.position.y = 0.5;
+  // navy backpack hugged on the lap (one hand stuck INSIDE it)
   const pack = new THREE.Group();
-  const packBody = box(0.24, 0.3, 0.14, mat(0xd9534a));
-  packBody.position.y = 0.66;
-  const packPocket = box(0.16, 0.14, 0.05, mat(0xe8776f), 0, 0.6, 0.09);
-  const strap1 = box(0.04, 0.26, 0.02, mat(0xa63a33), -0.07, 0.66, -0.085);
-  const strap2 = box(0.04, 0.26, 0.02, mat(0xa63a33), 0.07, 0.66, -0.085);
-  pack.add(packBody, packPocket, strap1, strap2);
-  armUp.add(aR, hand, pack);
-  armUp.rotation.z = -0.35;
-  guy.add(armUp);
-  player.guyArm = armUp;
+  pack.position.set(0, 0.92, -0.26);
+  const packBody = box(0.4, 0.34, 0.22, mat(0x3d4a66));
+  const packFlap = box(0.34, 0.14, 0.2, mat(0x4d5c7e), 0, 0.2, 0);
+  const packPocket = box(0.26, 0.16, 0.05, mat(0x4d5c7e), 0, -0.05, -0.13);
+  const packStrap = box(0.05, 0.3, 0.03, mat(0x2c3550), -0.14, 0, 0.12);
+  const packStrap2 = box(0.05, 0.3, 0.03, mat(0x2c3550), 0.14, 0, 0.12);
+  pack.add(packBody, packFlap, packPocket, packStrap, packStrap2);
+  guy.add(pack);
+  // arms wrapping around the pack
+  for (const sx of [-1, 1]) {
+    const arm = new THREE.Mesh(G.arm, gShirt);
+    arm.position.set(sx * 0.27, 1.05, -0.15);
+    arm.rotation.x = -1.15;
+    arm.rotation.z = sx * -0.26;
+    arm.scale.setScalar(1.15);
+    arm.castShadow = true;
+    guy.add(arm);
+  }
+  // left hand grips the side; right hand is swallowed by the pack
+  const handL = new THREE.Mesh(G.hand, gSkin);
+  handL.position.set(-0.24, 0.98, -0.34); handL.scale.setScalar(1.3);
+  const handR = new THREE.Mesh(G.hand, gSkin);
+  handR.position.set(0.13, 1.13, -0.28); handR.scale.setScalar(1.2); // wrist in the flap
+  guy.add(handL, handR);
+  player.guyArm = pack; // wiggles as he struggles with it
   wc.add(guy);
 
   root.add(wc);
@@ -605,7 +679,7 @@ function spawnEntity(type, x, z) {
   switch (type) {
     case 'walker': case 'jogger': {
       const p = makePerson(Math.random() < 0.14
-        ? { shirt: 0xf0ece2, skirt: true, skirtMat: floralMat, longHair: true, hair: 0x2c2018, bareArms: false } // the floral-skirt friend look
+        ? { shirt: 0xf0ece2, skirt: true, skirtMat: floralMat, longHair: true, hair: 0x2c2018, bareArms: false, happyEyes: true } // the floral-skirt friend look
         : Math.random() < 0.3 ? { skirt: true } : {});
       built = { g: p.g, r: 0.48 };
       e = { person: p, vz: type === 'jogger' ? rand(3.4, 4.6) : rand(1.4, 2.4), vx: 0 };
@@ -1026,7 +1100,7 @@ function frame(dt) {
     player.lady.armL.rotation.x = -1.12; // keep hands on the handles
     player.lady.armR.rotation.x = -1.12;
     for (const w of player.wheels) w.userData.spin.rotation.z -= (speed * dt) / 0.31;
-    player.guyArm.rotation.z = -0.35 + Math.sin(t * 7) * 0.12; // waving the stuck hand
+    player.guyArm.rotation.z = Math.sin(t * 7) * 0.05; // struggling with the pack
     if (invincible > 0) {
       invincible -= dt;
       player.group.visible = Math.floor(invincible * 12) % 2 === 0;
@@ -1059,7 +1133,7 @@ function frame(dt) {
   } else if (state === 'title') {
     // idle diorama: gentle bobbing
     player.phase += dt * 2;
-    player.guyArm.rotation.z = -0.35 + Math.sin(t * 3) * 0.15;
+    player.guyArm.rotation.z = Math.sin(t * 3) * 0.06;
   }
 
   // --- entities anim ---
