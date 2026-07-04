@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>First Aid Rush! 🩹</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩹</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="hud-left">
+    <div id="score">0</div>
+    <div id="eggs">🥚 0</div>
+  </div>
+  <div id="hud-center">
+    <div id="wing">WING 1</div>
+    <div id="progress"><div id="progress-fill"></div><div id="progress-runner">👩‍🦽</div><div id="progress-goal">🏥</div></div>
+  </div>
+  <div id="hud-right">
+    <div id="hearts"><span>🩹</span><span>🩹</span><span>🩹</span></div>
+  </div>
+</div>
+
+<div id="combo" class="toast hidden"></div>
+<div id="bubble" class="hidden"><span id="bubble-text"></span></div>
+
+<!-- Title screen -->
+<div id="title" class="overlay">
+  <div class="card">
+    <div class="mini-story">🎒 + ☝️ = 😱</div>
+    <h1>FIRST AID<br/>RUSH!</h1>
+    <p class="story">His finger is stuck in a backpack.<br/>
+    <b>Push the wheelchair through the mall crowd<br/>and get him to the First Aid room!</b></p>
+    <button id="btn-start">PUSH! ▶</button>
+    <p class="keys">🖱️ drag / ⬅️➡️ or A D to steer &nbsp;·&nbsp; hold ⬆️ / W to sprint</p>
+  </div>
+</div>
+
+<!-- Level clear banner -->
+<div id="levelup" class="banner hidden">
+  <div class="banner-inner">
+    <h2>WING CLEAR!</h2>
+    <p id="levelup-text">This First Aid room is closed?! Next wing!!</p>
+  </div>
+</div>
+
+<!-- Game over -->
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <div class="mini-story">🩹💔</div>
+    <h1 class="small">OUCH.</h1>
+    <p class="story" id="over-quote">"The finger... will be remembered."</p>
+    <div class="scores">
+      <div>SCORE <b id="final-score">0</b></div>
+      <div>BEST <b id="best-score">0</b></div>
+      <div>WING <b id="final-wing">1</b></div>
+    </div>
+    <button id="btn-retry">TRY AGAIN ↻</button>
+    <p class="keys">or press <b>R</b></p>
+  </div>
+</div>
+
+<button id="btn-mute" title="sound">🔊</button>
+<div id="vignette"></div>
+
+<script type="module" src="js/main.js?v=6"></script>
+</body>
+</html>
